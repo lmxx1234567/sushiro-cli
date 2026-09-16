@@ -1,7 +1,7 @@
 // Package binaries and legal material after prepare --publish-ready.
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { json, options, platform, sha256, targets, writeJSON } from './common.mjs';
+import { json, npmTargets, options, platform, sha256, targets, writeJSON } from './common.mjs';
 import { validatePackageSet } from './release-model.mjs';
 import { archive } from './archive.mjs';
 
@@ -20,7 +20,7 @@ for (const target of targets) {
   const { os: npmOS, cpu, binary } = platform(target);
   const pkg = path.join(source, 'packages', `${npmOS}-${cpu}`);
   if (sha256(path.join(pkg, 'bin', binary)) !== release.build.binaries[target]) throw new Error(`binary mismatch: ${target}`);
-  const entries = [{ name: binary, data: readFileSync(path.join(pkg, 'bin', binary)), mode: 0o755 }, { name: 'README.md', data: readFileSync(path.join(pkg, 'README.md')) },
+  const entries = [{ name: binary, data: readFileSync(path.join(pkg, 'bin', binary)), mode: 0o755 }, { name: 'README.md', data: Buffer.from(`# sushiro-cli ${identity.version} — ${target}\n\nStandalone binary: extract this archive and run ${target.startsWith('windows-') ? '.\\' : './'}${binary} help.\n\n${npmTargets(release.npmTargets).includes(target) ? 'Alternatively install the main npm package: npm install -g ' + release.name + '.' : 'npm installation is unavailable for this target; use this standalone binary.'}\n\nLicense and privacy documents are in legal/.\n`) },
     ...readdirSync(path.join(pkg, 'legal')).map(file => ({ name: `legal/${file}`, data: readFileSync(path.join(pkg, 'legal', file)) }))];
   const filename = `sushiro-cli-${identity.version}-${target}.tar.gz`;
   writeFileSync(path.join(out, filename), archive(entries)); files.push(filename);

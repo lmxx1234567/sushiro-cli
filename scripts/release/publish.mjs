@@ -2,13 +2,14 @@
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { json, npm, options, sha256 } from './common.mjs';
+import { json, npm, npmTargets, options, sha256 } from './common.mjs';
 import { publicationPlan, validatePackageSet } from './release-model.mjs';
 
 const args = options(['--release', '--event', '--execute']);
 if (!args['--release'] || !args['--event']) throw new Error('--release and --event are required');
 const release = json(args['--release']), identity = json(args['--event']);
 const packages = validatePackageSet(release, identity);
+console.log(`Declared npm targets: ${npmTargets(release.npmTargets).join(", ")}; ${packages.length} packages, main last.`);
 const base = path.dirname(path.resolve(args['--release']));
 for (const pkg of packages) {
   if (!/^tarballs\/[a-zA-Z0-9._-]+\.tgz$/.test(pkg.tarball)) throw new Error('invalid tarball path');

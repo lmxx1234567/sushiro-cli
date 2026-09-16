@@ -13,7 +13,12 @@ test('published release binds tag, semver, source, prerelease and all seven pack
   const packages = targets.map(target => { const {os,cpu}=platform(target); return { name:`sushiro-cli-${os}-${cpu}`,version:'1.2.3',integrity:'sha512-test' }; }).concat({name:'sushiro-cli',version:'1.2.3',integrity:'sha512-test'});
   const release = { name: 'sushiro-cli', version: '1.2.3', publishReady: true, build: { version: '1.2.3', commit, dirty: false }, publicSource: { commit }, packages };
   assert.equal(validatePackageSet(release, identity).at(-1).name, 'sushiro-cli');
-  assert.throws(() => validatePackageSet({...release,packages:[...packages].reverse()},identity), /six exact/);
+  const reduced = { ...release, npmTargets: targets.slice(0, 4), packages: [...packages.slice(0, 4), packages.at(-1)] };
+  assert.equal(validatePackageSet(reduced, identity).length, 5);
+  assert.throws(() => validatePackageSet({ ...reduced, npmTargets: undefined }, identity), /declared exact/);
+  assert.throws(() => validatePackageSet({ ...release, npmTargets: targets.slice(0, 4) }, identity), /declared exact/);
+  for (const npmTargets of [[], ['linux-amd64', 'linux-amd64'], ['linux-typo'], null]) assert.throws(() => validatePackageSet({ ...release, npmTargets }, identity), /npmTargets/);
+  assert.throws(() => validatePackageSet({...release,packages:[...packages].reverse()},identity), /declared exact/);
   assert.throws(() => validatePackageSet({...release,build:{...release.build,commit:'b'.repeat(40)}},identity), /must match/);
 });
 test('rerun preflight verifies existing integrity; bootstrap and conflicts never become writes', () => {

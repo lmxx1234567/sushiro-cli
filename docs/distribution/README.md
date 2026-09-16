@@ -2,6 +2,10 @@
 
 实现使用 Node 内置模块，无 npm 开发依赖。npm 只分发预编译 Go 程序；不使用 postinstall、不在用户安装阶段从外部下载二进制。生成的主包提供 `sushiro-cli` 命令，所有 CLI 参数（包括 `mcp`）原样传给 Go 程序。
 
+## npm 平台支持
+
+0.1.3 的 npm 发布目标为 macOS/Linux（x64、ARM64）；Windows npm 暂不可用，Windows 用户可使用 GitHub Release 独立二进制。主包通过 `os` 限制安装平台。维护者可用 `npmTargets` 显式选择平台；省略时保持历史六平台行为，空数组或无效目标不会静默降级。详见 [发布配置](release-plan.md)。
+
 ## 安装后的首次使用
 
 安装与启动不要求导入个人凭证。安装主包并保留 optional dependencies 后，直接使用 `sushiro-cli help`、`sushiro-cli version --json`，或将 MCP 客户端配置为执行 `sushiro-cli mcp`；MCP 初始化和工具发现不需要个人登录。npm 启动器不读取个人凭证，也不以 `auth status.complete` 作为启动条件。
@@ -36,7 +40,7 @@ node scripts/release/prepare.mjs --config /absolute/path/npm-config.json --versi
 
 构建入口严格为 `./cmd/sushiro-cli`，CGO 关闭。默认 dist 为 `packaging/out/dist`，可用 `--dist /absolute/path/dist` 更改；prepare 必须使用同一个 dist。产物遵循 `dist/<goos>-<goarch>/sushiro-cli[.exe]`。构建生成 `build.json`，记录版本、源码提交、工作区是否干净、Go 版本、六个二进制的 SHA-256。Go 最低 1.24.0。构建通过 `-ldflags "-s -w -X main.version=<version>"` 注入版本，使 CLI `version --json` 与包版本一致。
 
-prepare 默认输出 `packaging/out/npm`，也支持 `--out`。已有输出目录会报错，避免混入旧版本；重跑请选择新目录。输出包括七个包目录、七个 `.tgz`、`SHA256SUMS` 与 `release.json`。其中 `release.json` 列出 tarball 路径、SHA-256、npm integrity、包内文件列表和构建记录。
+prepare 默认输出 `packaging/out/npm`，也支持 `--out`。已有输出目录会报错，避免混入旧版本；重跑请选择新目录。输出包括六个平台素材目录、主包目录、所选平台加主包的 `.tgz`、`SHA256SUMS` 与 `release.json`。其中 `release.json` 列出 tarball 路径、SHA-256、npm integrity、包内文件列表和构建记录。
 
 | Go 目录 | npm 平台包后缀 | 程序 |
 | --- | --- | --- |
@@ -47,7 +51,7 @@ prepare 默认输出 `packaging/out/npm`，也支持 `--out`。已有输出目�
 | windows-amd64 | win32-x64 | sushiro-cli.exe |
 | windows-arm64 | win32-arm64 | sushiro-cli.exe |
 
-有 scope 时主包名为 `<scope>/<name>`，无 scope 时为 `<name>`；平台包在主包名后加 `-<os>-<cpu>`。六个 `optionalDependencies` 使用同一个精确版本，不带 `^` 或 `~`。平台包声明 `os` / `cpu`，由 npm 选择；启动器还会检查实际安装包版本。依据 [npm package.json 文档](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/)，平台筛选和可选依赖是安装行为，安装时不能省略 optional dependencies。
+有 scope 时主包名为 `<scope>/<name>`，无 scope 时为 `<name>`；平台包在主包名后加 `-<os>-<cpu>`。所选平台的 `optionalDependencies` 使用同一个精确版本，不带 `^` 或 `~`。平台包声明 `os` / `cpu`，由 npm 选择；启动器还会检查实际安装包版本。依据 [npm package.json 文档](https://docs.npmjs.com/cli/v11/configuring-npm/package-json/)，平台筛选和可选依赖是安装行为，安装时不能省略 optional dependencies。
 
 ## 启动器行为
 
@@ -75,7 +79,7 @@ node --test packaging/test/distribution.test.mjs
 
 `distribution-prepare.yml` 只手动触发，使用真实核心构建，上传带 `private: true` 的审核产物，没有 npm 凭证或 publish 步骤。构建失败时不会使用 fixture 替代。
 
-自动流程为 `npm-release.yml`：GitHub **Release published** 后执行跨平台构建、测试与附件准备；完成首次七包建包和 OIDC 设置并显式开启后，平台包先发布，主包最后。未开启时 summary 明确 npm 未发布。GitHub Release 不代表 npm 已可安装；包名、账号检查、bootstrap、OIDC配置及失败重跑规则见 [发布指南](release-plan.md)。
+自动流程为 `npm-release.yml`：GitHub **Release published** 后执行跨平台构建、测试与附件准备；完成首次所选包建包和 OIDC 设置并显式开启后，平台包先发布，主包最后。未开启时 summary 明确 npm 未发布。GitHub Release 不代表 npm 已可安装；包名、账号检查、bootstrap、OIDC配置及失败重跑规则见 [发布指南](release-plan.md)。
 
 正式发布前，确认 scope 权限、包名、版本及第三方归属。`license: "MIT"` 仅代表主项目许可。每个包的 `legal/` 必须包含 LICENSE、CREDITS.md、THIRD_PARTY_NOTICES.md、THIRD_PARTY_LICENSES.txt、PRIVACY.md、DISCLAIMER.md、SECURITY.md；若存在 NOTICE/NOTICE.md 也包含。`legalFiles` 可追加经审阅的材料（路径相对于配置文件）；不复制完整 docs 目录。
 

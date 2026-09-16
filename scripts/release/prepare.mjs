@@ -1,6 +1,6 @@
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { artifact, auditedGo, json, npm, options, platform, root, sha256, targets, version, writeJSON } from './common.mjs';
+import { artifact, auditedGo, json, npm, npmTargets, options, platform, root, sha256, targets, version, writeJSON } from './common.mjs';
 import { legalFilesFor, packagedMarkdown, repository, verifyPublicSource } from './policy.mjs';
 
 const args = options(['--config', '--version', '--dist', '--out', '--publish-ready']);
@@ -12,6 +12,8 @@ const scope = config.scope ?? '';
 if (typeof scope !== 'string' || scope.trim() !== scope || (scope !== '' && !/^@[a-z0-9][a-z0-9._-]*$/.test(scope)) || typeof config.name !== 'string' || config.name.trim() !== config.name || !/^[a-z0-9][a-z0-9._-]*$/.test(config.name)) {
   throw new Error('invalid scope or package name');
 }
+const selectedTargets = npmTargets(config.npmTargets);
+const supportedOS = [...new Set(selectedTargets.map(target => platform(target).os))];
 const name = scope ? `${scope}/${config.name}` : config.name;
 if (name.length + '-windows-arm64'.length > 214) throw new Error('package name is too long');
 const dist = path.resolve(args['--dist'] || path.join(root, 'packaging/out/dist'));
@@ -44,7 +46,7 @@ mkdirSync(path.join(out, 'tarballs'), { recursive: true });
 const base = { version: releaseVersion, description: 'Sushiro China CLI and stdio MCP', license: config.license || 'UNLICENSED', private: !publishReady, publishConfig: { access: 'public' }, repository: { type: 'git', url: `git+${repository}.git` }, homepage: `${repository}#readme`, bugs: { url: `${repository}/issues` } };
 const dependencies = {};
 const packages = [];
-function createPackage(directory, manifest, populate) {
+function createPackage(directory, manifest, populate, pack = true) {
   mkdirSync(directory, { recursive: true });
   if (legalFiles.length) mkdirSync(path.join(directory, 'legal'));
   for (const file of legalFiles) writeFileSync(path.join(directory, 'legal', path.basename(file)), legalContent.get(file));
@@ -53,7 +55,14 @@ function createPackage(directory, manifest, populate) {
   const policyLinks = legalFiles.map(file => `[${path.basename(file)}](legal/${path.basename(file)})`).join(' · ');
   writeFileSync(path.join(directory, 'README.md'), `\n## License, privacy and attribution\n\n${policyLinks}\n\nThe project license does not replace third-party licenses. Built-in public query configuration is present in the binary; personal credentials are not bundled. npm uninstall does not remove application configuration.\n`, { flag: 'a' });
   if (!publishReady) writeFileSync(path.join(directory, 'README.md'), '\nSource links in this private test package are placeholders; their public availability has not been verified.\n', { flag: 'a' });
+  const installHelp = manifest.bin
+    ? `Install: \`npm install -g ${name}\`. Then run \`sushiro-cli help\`.\n\n`
+    : `Platform dependency: npm installs this package automatically with \`${name}\`. Install the CLI with \`npm install -g ${name}\`; do not install this dependency directly.\n\n`;
+  const limitation = supportedOS.includes('win32') ? '' : 'Windows npm installation is currently unavailable. Windows standalone binaries are available from GitHub Releases.\n\n';
+  const readme = path.join(directory, 'README.md');
+  writeFileSync(readme, `# ${manifest.name}\n\n${installHelp}${limitation}` + readFileSync(readme, 'utf8').replace(/^# [^\n]+\n\n/, ''));
   populate();
+  if (!pack) return;
   const [packed] = JSON.parse(npm(['pack', '--json', '--ignore-scripts', '--cache', path.join(out, '.npm-cache'), '--pack-destination', path.join(out, 'tarballs')], { cwd: directory }));
   const tarball = path.join(out, 'tarballs', packed.filename);
   packages.push({ name: manifest.name, version: releaseVersion, tarball: path.relative(out, tarball).split(path.sep).join('/'), sha256: sha256(tarball), integrity: packed.integrity, files: packed.files.map(file => file.path) });
@@ -61,22 +70,22 @@ function createPackage(directory, manifest, populate) {
 for (const target of targets) {
   const { os, cpu, binary } = platform(target);
   const packageName = `${name}-${os}-${cpu}`;
-  dependencies[packageName] = releaseVersion;
+  if (selectedTargets.includes(target)) dependencies[packageName] = releaseVersion;
   const directory = path.join(out, 'packages', `${os}-${cpu}`);
   createPackage(directory, { ...base, name: packageName, os: [os], cpu: [cpu], files: ['bin/', 'legal/'] }, () => {
     mkdirSync(path.join(directory, 'bin'));
     const destination = path.join(directory, 'bin', binary);
     copyFileSync(artifact(dist, target), destination);
     chmodSync(destination, 0o755);
-  });
+  }, selectedTargets.includes(target));
 }
 const directory = path.join(out, 'packages', 'main');
-createPackage(directory, { ...base, name, bin: { 'sushiro-cli': 'bin/sushiro-cli.cjs' }, engines: { node: '>=20' }, files: ['bin/', 'legal/'], optionalDependencies: dependencies }, () => {
+createPackage(directory, { ...base, name, os: supportedOS, bin: { 'sushiro-cli': 'bin/sushiro-cli.cjs' }, engines: { node: '>=20' }, files: ['bin/', 'legal/'], optionalDependencies: dependencies }, () => {
   mkdirSync(path.join(directory, 'bin'));
   const destination = path.join(directory, 'bin', 'sushiro-cli.cjs');
   copyFileSync(path.join(root, 'packaging/npm/launcher.cjs'), destination);
   chmodSync(destination, 0o755);
 });
-writeJSON(path.join(out, 'release.json'), { name, version: releaseVersion, publishReady, publicSource, build, packages });
+writeJSON(path.join(out, 'release.json'), { name, version: releaseVersion, npmTargets: selectedTargets, publishReady, publicSource, build, packages });
 writeFileSync(path.join(out, 'SHA256SUMS'), packages.map(pkg => `${pkg.sha256}  ${pkg.tarball}\n`).join(''));
 console.log(`Prepared ${packages.length} packages in ${out}. No packages were published.`);

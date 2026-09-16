@@ -1,4 +1,4 @@
-import { platform, targets, version } from './common.mjs';
+import { npmTargets, platform, version } from './common.mjs';
 
 export function releaseIdentity(event, commit) {
   if (event.action !== 'published' || event.release?.draft || event.repository?.full_name !== 'lmxx1234567/sushiro-cli' || event.repository.private !== false) throw new Error('requires a published release in the public lmxx1234567/sushiro-cli repository');
@@ -16,8 +16,8 @@ export function validatePackageSet(release, identity) {
   version(identity.version);
   if (identity.npmTag !== (identity.version.includes('-') ? 'next' : 'latest')) throw new Error('npm dist-tag must match prerelease status');
   if (!release.publishReady || release.version !== identity.version || release.build?.version !== identity.version || release.build?.dirty || release.build?.commit !== identity.commit || release.publicSource?.commit !== identity.commit) throw new Error('release tag, source, build and package versions must match');
-  const names = targets.map(target => { const { os, cpu } = platform(target); return `${release.name}-${os}-${cpu}`; }).concat(release.name);
-  if (release.packages?.length !== 7 || release.packages.some((pkg, index) => pkg.name !== names[index] || pkg.version !== identity.version || !pkg.integrity?.startsWith('sha512-'))) throw new Error('expected six exact-version platform packages followed by the main package');
+  const names = npmTargets(release.npmTargets).map(target => { const { os, cpu } = platform(target); return `${release.name}-${os}-${cpu}`; }).concat(release.name);
+  if (release.packages?.length !== names.length || release.packages.some((pkg, index) => pkg.name !== names[index] || pkg.version !== identity.version || !pkg.integrity?.startsWith('sha512-'))) throw new Error('expected declared exact-version platform packages followed by the main package');
   return release.packages;
 }
 

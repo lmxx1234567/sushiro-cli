@@ -65,13 +65,15 @@ jobs:
       - name: Create candidate package configuration
         env:
           PACKAGE_SCOPE: ${{ vars.NPM_SCOPE }}
+          NPM_TARGETS: ${{ vars.NPM_TARGETS }}
           PACKAGE_NAME: ${{ vars.NPM_PACKAGE_NAME || 'sushiro-cli' }}
-        run: node -e 'require("node:fs").writeFileSync("packaging/out/config.json", JSON.stringify({scope:process.env.PACKAGE_SCOPE,name:process.env.PACKAGE_NAME,license:"MIT"}))'
+        run: |
+          node -e 'require("node:fs").writeFileSync("packaging/out/config.json", JSON.stringify({scope:process.env.PACKAGE_SCOPE,name:process.env.PACKAGE_NAME,license:"MIT",...(process.env.NPM_TARGETS ? {npmTargets:JSON.parse(process.env.NPM_TARGETS)} : {})}))'
       - name: Cross-build all six Go targets
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: node scripts/release/build.mjs --version "$RELEASE_VERSION"
-      - name: Verify public source and pack seven exact-version packages
+      - name: Verify public source and pack declared exact-version packages
         env:
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: node scripts/release/prepare.mjs --version "$RELEASE_VERSION" --config packaging/out/config.json --publish-ready
@@ -153,9 +155,9 @@ jobs:
           {
             echo "Tests: $TEST_RESULT; build: $BUILD_RESULT; GitHub assets: $ASSET_RESULT."
             if [ "$NPM_ENABLED" != "true" ]; then
-              echo 'npm NOT published: NPM_PUBLISH_ENABLED is not true. Complete seven-package bootstrap, account/scope checks and trusted-publisher setup first.'
+              echo 'npm NOT published: NPM_PUBLISH_ENABLED is not true. Complete declared-package bootstrap, account/scope checks and trusted-publisher setup first.'
             elif [ "$NPM_RESULT" = "success" ]; then
-              echo 'npm publication/reconciliation completed for all seven packages.'
+              echo 'npm publication/reconciliation completed for all declared packages.'
             else
               echo "npm NOT fully published: job result $NPM_RESULT. Inspect logs and reconcile registry integrity before rerunning; a GitHub Release alone does not mean npm is installable."
             fi

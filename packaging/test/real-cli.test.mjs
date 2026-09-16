@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createInterface } from 'node:readline';
 import { test } from 'node:test';
-import { json, npm, root, run, writeJSON } from '../../scripts/release/common.mjs';
+import { json, npm, root, run, targets, writeJSON } from '../../scripts/release/common.mjs';
 
 test('real CLI: six builds, private offline package install, empty configuration, help/version, MCP discovery and EOF', {timeout:300_000},async()=>{
  const temp=mkdtempSync(path.join(os.tmpdir(),'sushiro-real-cli-'));
@@ -15,10 +15,11 @@ test('real CLI: six builds, private offline package install, empty configuration
  try {
   const dist=path.join(temp,'dist'),out=path.join(temp,'release'),config=path.join(temp,'config.json');
   const version='0.0.0-integration.1';
-  writeJSON(config,{scope:'@sushiro-private-test',name:'client',license:'UNLICENSED'});
+  const npmTargets=process.platform==='win32'?targets:targets.slice(0,4);
+  writeJSON(config,{scope:'@sushiro-private-test',name:'client',license:'UNLICENSED',npmTargets});
   run(process.execPath,[path.join(root,'scripts/release/build.mjs'),'--version',version,'--dist',dist]);
   run(process.execPath,[path.join(root,'scripts/release/prepare.mjs'),'--version',version,'--config',config,'--dist',dist,'--out',out], {env:{...process.env,npm_config_cache:path.join(temp,'pack-cache')}});
-  const release=json(path.join(out,'release.json'));assert.equal(release.packages.length,7);
+  const release=json(path.join(out,'release.json'));assert.equal(release.packages.length,npmTargets.length+1);
   assert.equal(release.publishReady,false);
   for(const pkg of release.packages)for(const file of ['LICENSE','CREDITS.md','PRIVACY.md','DISCLAIMER.md','SECURITY.md','THIRD_PARTY_NOTICES.md','THIRD_PARTY_LICENSES.txt'])assert.ok(pkg.files.includes(`legal/${file}`),`missing ${file} in ${pkg.name}`);
   const install=path.join(temp,'install');mkdirSync(install);

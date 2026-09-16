@@ -1,7 +1,7 @@
 // Prints reviewed argv only. Never authenticates or publishes.
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { json, options, sha256 } from './common.mjs';
+import { json, npmTargets, options, sha256 } from './common.mjs';
 import { validatePackageSet } from './release-model.mjs';
 
 const args = options(['--dir']);
@@ -15,4 +15,4 @@ const plan = validatePackageSet(release, identity).map((pkg, index) => {
   return { order: index + 1, name: pkg.name, version: pkg.version, sha256: pkg.sha256,
     argv: ['npm', 'publish', file, '--registry', 'https://registry.npmjs.org/', '--access', 'public', '--tag', identity.npmTag, '--ignore-scripts'] };
 });
-console.log(JSON.stringify({ execute: false, source_commit: identity.commit, npm_tag: identity.npmTag, prerequisite: 'separate human approval and authenticated npm ownership; publish exact reviewed artifacts only', plan }, null, 2));
+console.log(JSON.stringify({ execute: false, npm_targets: npmTargets(release.npmTargets), source_commit: identity.commit, npm_tag: identity.npmTag, prerequisite: 'separate human approval and authenticated npm ownership; publish exact reviewed artifacts only', plan }, null, 2));

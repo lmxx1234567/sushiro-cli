@@ -1,7 +1,7 @@
 import { spawnTestProcess, stopTestProcess } from './process-tree.mjs';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, readFileSync, readdirSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -131,6 +131,30 @@ test('six packages: offline pack/install, streams, arguments, exit status, signa
     assert.equal(unscoped.name, 'sushiro-cli-local-test');
     assert.deepEqual(unscoped.bin, { 'sushiro-cli': 'bin/sushiro-cli.cjs' });
     assert.equal(unscoped.optionalDependencies['sushiro-cli-local-test-darwin-arm64'], releaseVersion);
+    // Explicitly reduced npm set still carries all six standalone binary archives.
+    writeJSON(config, { scope: '', name: 'sushiro-cli-local-test', license: 'UNLICENSED', npmTargets: targets.slice(0, 4) });
+    const reducedOut = path.join(temp, 'reduced');
+    run(process.execPath, [...args, '--out', reducedOut]);
+    const reduced = json(path.join(reducedOut, 'release.json'));
+    const reducedMain = json(path.join(reducedOut, 'packages/main/package.json'));
+    assert.equal(reduced.packages.length, 5);
+    assert.deepEqual(reduced.npmTargets, targets.slice(0, 4));
+    assert.deepEqual(reducedMain.os, ['darwin', 'linux']);
+    assert.equal(Object.keys(reducedMain.optionalDependencies).length, 4);
+    assert.ok(reduced.packages.every(pkg => !pkg.name.includes('win32')));
+    assert.equal(readdirSync(path.join(reducedOut, 'tarballs')).length, 5);
+    const reducedReadme = readFileSync(path.join(reducedOut, 'packages/main/README.md'), 'utf8');
+    assert.match(reducedReadme, /npm install -g sushiro-cli-local-test/);
+    assert.match(reducedReadme, /Windows npm installation is currently unavailable/);
+    assert.match(readFileSync(path.join(reducedOut, 'packages/linux-x64/README.md'), 'utf8'), /Platform dependency: npm installs this package automatically/);
+    writeJSON(path.join(reducedOut, 'test-release.json'), { ...reduced, publishReady: true, publicSource: synthetic.publicSource, build: synthetic.build });
+    const reducedAssets = path.join(temp, 'reduced-assets');
+    run(process.execPath, [path.join(root, 'scripts/release/assets.mjs'), '--release', path.join(reducedOut, 'test-release.json'), '--event', eventPath, '--out', reducedAssets]);
+    assert.equal(readdirSync(reducedAssets).filter(file => file.endsWith('.tar.gz')).length, 6);
+    const reducedPlan = JSON.parse(run(process.execPath, [path.join(root, 'scripts/release/bootstrap-plan.mjs'), '--dir', reducedAssets]));
+    assert.equal(reducedPlan.plan.length, 5);
+    assert.deepEqual(reducedPlan.npm_targets, targets.slice(0, 4));
+    assert.equal(reducedPlan.plan.at(-1).name, reduced.name);
     console.log(`Runtime checks passed on ${process.platform}-${process.arch}; other targets only cross-built.`);
     success = true;
   } finally {

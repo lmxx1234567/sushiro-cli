@@ -7,6 +7,14 @@ import path from 'node:path';
 export const root = fileURLToPath(new URL('../../', import.meta.url));
 export const auditedGo = 'go1.26.5';
 export const targets = ['darwin-amd64', 'darwin-arm64', 'linux-amd64', 'linux-arm64', 'windows-amd64', 'windows-arm64'];
+// Omission preserves historical six-platform releases; an explicit list is strict.
+export function npmTargets(value) {
+  if (value === undefined) return [...targets];
+  if (!Array.isArray(value) || !value.length || new Set(value).size !== value.length || value.some(target => !targets.includes(target))) {
+    throw new Error('npmTargets must be a nonempty unique list of supported Go targets');
+  }
+  return targets.filter(target => value.includes(target));
+}
 export function platform(target) {
   const [goos, goarch] = target.split('-');
   return { goos, goarch, os: goos === 'windows' ? 'win32' : goos, cpu: goarch === 'amd64' ? 'x64' : goarch, binary: goos === 'windows' ? 'sushiro-cli.exe' : 'sushiro-cli' };

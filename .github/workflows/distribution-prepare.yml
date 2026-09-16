@@ -8,6 +8,9 @@ on:
       scope:
         description: Optional npm scope including @; empty means unscoped (name pending review)
         required: false
+      npm_targets:
+        description: Optional JSON array of npm Go targets; blank keeps all six
+        required: false
 permissions:
   contents: read
 jobs:
@@ -24,8 +27,10 @@ jobs:
           package-manager-cache: false
       - name: Create private preparation config
         env:
+          NPM_TARGETS: ${{ inputs.npm_targets }}
           PACKAGE_SCOPE: ${{ inputs.scope }}
-        run: node -e 'require("node:fs").writeFileSync("/tmp/npm-release-config.json", JSON.stringify({scope:process.env.PACKAGE_SCOPE,name:"sushiro-cli",license:"UNLICENSED"}))'
+        run: |
+          node -e 'require("node:fs").writeFileSync("/tmp/npm-release-config.json", JSON.stringify({scope:process.env.PACKAGE_SCOPE,name:"sushiro-cli",license:"UNLICENSED",...(process.env.NPM_TARGETS ? {npmTargets:JSON.parse(process.env.NPM_TARGETS)} : {})}))'
       - name: Build six targets
         env:
           RELEASE_VERSION: ${{ inputs.version }}
