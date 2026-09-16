@@ -43,14 +43,14 @@ CLI 将结果写到标准输出，MCP 通过 stdin/stdout 向宿主返回文本�
 
 MCP 宿主能够接收工具参数和输出，并可能将其保存、发送给模型供应商或其他服务。是否用于训练、保存多久、在哪个地区处理，取决于所选宿主、供应商、账户类型和设置，本项目不能保证“永不离机”或“不会被用于训练”。工具的只读/写入提示不是宿主权限控制；请按需要限制个人工具与写操作。
 
-本 CLI/MCP 产品没有桌面截图、Computer Use、浏览器控制、系统代理设置或证书安装能力。若宿主另外执行 Computer Use，其截图和桌面内容由宿主按自身权限处理，不是本 CLI 的采集行为。开发阶段另有 `docs/auth/observer/` 凭证观察研究原型，可捕获会话，其协调脚本涉及代理和证书；它不由 CLI/npm 自动启动，计划不纳入首发公开文件。不能把本产品的能力说明套用于主动运行该原型。
+本 CLI/MCP 产品没有桌面截图、Computer Use、浏览器控制、系统代理设置或证书安装能力。若宿主另外执行 Computer Use，其截图和桌面内容由宿主按自身权限处理，不是本 CLI 的采集行为。
 
 从 GitHub/npm 下载、访问项目页面、提交 issue 或发送附件，会另外与这些第三方交互。维护者可看到你主动提供的反馈，公开 issue 的内容还可能被他人复制；“无产品遥测”不表示维护者不可能收到你提交的数据。相关平台按其政策处理账户、网络和内容信息：[GitHub 隐私声明](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement)、[npm 隐私说明](https://docs.npmjs.com/policies/privacy/)。
 
-计划项目地址为 [lmxx1234567/sushiro-cli](https://github.com/lmxx1234567/sushiro-cli)，目前尚未创建。发布后，非敏感反馈可通过项目 issues 提交，敏感问题仅使用经确认启用的私密渠道；这不是已启用联系方式的声明。
+项目地址为 [lmxx1234567/sushiro-cli](https://github.com/lmxx1234567/sushiro-cli)。非敏感反馈可通过项目 issues 提交；安全或隐私问题请使用已启用的 [GitHub 私密漏洞报告](https://github.com/lmxx1234567/sushiro-cli/security/advisories/new)，不要在公开 issue 中发送个人数据。
 
 发现误发凭证或隐私问题时，停止继续分享，按[安全说明](SECURITY.md)联系维护者；涉及官方会话失效、撤销或官方数据请求，应使用寿司郎/微信现行官方渠道。维护者不能代替第三方承诺删除其全部副本。
 
 ## English summary
 
-The reviewed CLI/MCP code has no maintainer telemetry or relay backend. Business requests target Sushiro over HTTPS, subject to your proxy settings. Public queries use an embedded query token and disclose request metadata and supplied coordinates; they are not anonymous. Imported personal credentials are unencrypted local JSON protected by Unix permissions, readable by applications running as the same user. Imported files survive uninstall. MCP hosts and model providers may receive, store or process tool results. GitHub/npm and voluntarily submitted reports have separate data flows. Publisher identity, privacy contact and applicable jurisdiction remain to be confirmed before release.
+The reviewed CLI/MCP code has no maintainer telemetry or relay backend. Business requests target Sushiro over HTTPS, subject to your proxy settings. Public queries use an embedded query token and disclose request metadata and supplied coordinates; they are not anonymous. Imported personal credentials are unencrypted local JSON protected by Unix permissions, readable by applications running as the same user. Imported files survive uninstall. MCP hosts and model providers may receive, store or process tool results. GitHub/npm and voluntarily submitted reports have separate data flows. The publisher account is lmxx1234567. Private security and privacy reports can be submitted through the repository’s GitHub private vulnerability reporting channel.

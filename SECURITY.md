@@ -1,12 +1,12 @@
 # 安全说明与漏洞报告
 
-更新日期：2026-09-16。当前处于开源发布准备阶段，尚未确定长期支持版本范围、响应时限或漏洞奖励计划。不要据此假定旧版本有安全维护承诺。
+更新日期：2026-09-16。项目已公开，尚未确定长期支持版本范围、响应时限或漏洞奖励计划。不要据此假定旧版本有安全维护承诺。
 
 ## 如何报告
 
-**发布前待完成：维护者应确认安全联系人，并启用、验证 GitHub 私密漏洞报告或公布可用的私密联系渠道。** 计划发布账号为 `lmxx1234567`、仓库为 [lmxx1234567/sushiro-cli](https://github.com/lmxx1234567/sushiro-cli)，目前尚未创建。当前没有已确认的私密地址，不应把计划入口当成已可用的联系方式。
+仓库已启用 [GitHub 私密漏洞报告](https://github.com/lmxx1234567/sushiro-cli/security/advisories/new)。请通过 Security → Advisories → **Report a vulnerability** 向维护者 `lmxx1234567` 提交安全问题。
 
-项目公开后，如果仓库的 Security → Advisories 页面提供 **Report a vulnerability**，请通过该入口报告；它仅在维护者启用后可用。若没有该入口或已公布的私密渠道，可在项目 issue 中只询问“如何私密联系安全维护者”，不附漏洞利用细节、个人数据或凭证；等待确认渠道后再发送详情。这与 [GitHub 官方报告指引](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately)一致，不代表本仓库已启用该功能。
+若该入口不可用，可在项目 issue 中仅询问私密联系方式，不附漏洞利用细节、个人数据或凭证。使用方法见 [GitHub 官方报告指引](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately)。
 
 报告应尽量包含版本/commit、操作系统、CLI 或 MCP 使用方式、影响描述，以及使用虚构账户和假 token 的最小复现。可以提供固定错误码及脱敏截图。不要发送实际 Authorization、WechatID、手机号、票据号码、完整凭证 JSON、代理捕获、请求头或未经检查的宿主日志。私密渠道仍可能由第三方托管，并非可以放心提交全部秘密的理由。
 
@@ -26,10 +26,10 @@
 
 只向可信的 MCP 宿主开放所需工具，核对每次写操作的具体参数。避免将个人工具开放给不可信对话或自动流程。不要将原始凭证放进命令行、环境变量、聊天、issue 或仓库；配置目录的环境变量只用于路径。使用私有文件导入并妥善处理导入源文件和备份。
 
-只使用来源可核对的发行物；发布文件哈希有助于检查一致性，但不能独立证明发布者身份。贡献者应使用虚构数据和测试 transport 复现问题，不要为测试实际预约或取消。不要在未经单独授权时运行 `docs/auth/observer/` 研究原型、修改系统代理或安装证书。
+只使用来源可核对的发行物；发布文件哈希有助于检查一致性，但不能独立证明发布者身份。贡献者应使用虚构数据和测试 transport 复现问题，不要为测试实际预约或取消。
 
 具体数据流、保留和删除方式见 [PRIVACY.md](PRIVACY.md)，配置方法见[配置说明](docs/configuration.md)，功能边界见[已知限制](docs/limitations.md)。
 
 ## English summary
 
-A working private security contact must be confirmed before release. Use GitHub's “Report a vulnerability” only if enabled; otherwise ask for a private contact without posting sensitive details. Reports should use synthetic credentials and minimal reproductions. No response-time, support-lifetime or bounty commitment has been established. Local credentials are unencrypted, MCP hosts may process personal outputs, and confirmation flags do not prove user authorization. Do not disclose real tokens or run account writes to reproduce a security issue.
+GitHub private vulnerability reporting is enabled for this repository. Use “Report a vulnerability”; if unavailable, ask for a private contact without posting sensitive details. Reports should use synthetic credentials and minimal reproductions. No response-time, support-lifetime or bounty commitment has been established. Local credentials are unencrypted, MCP hosts may process personal outputs, and confirmation flags do not prove user authorization. Do not disclose real tokens or run account writes to reproduce a security issue.
