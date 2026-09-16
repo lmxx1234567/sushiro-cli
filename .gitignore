@@ -1,0 +1,36 @@
+# Local build/test output
+/dist/
+/sushiro
+/sushiro.exe
+/sushiro-cli
+/sushiro-cli.exe
+*.test
+coverage.out
+coverage.html
+packaging/out/
+node_modules/
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Local configuration and sensitive diagnostics (never an export allowlist)
+.env
+.env.*
+!.env.example
+/private/
+/local/
+/secrets/
+/captures/
+/credentials.json
+/public-import.json
+/public-config.json
+**/rollback.json
+**/snapshot.json
+*.har
+*.pcap
+*.pcapng
+*.pem
+*.key
+*.p12
+*.pfx
+*.log

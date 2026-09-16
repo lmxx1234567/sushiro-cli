@@ -1,0 +1,44 @@
+name: Prepare npm artifacts (no publishing)
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact package version
+        required: true
+      scope:
+        description: Optional npm scope including @; empty means unscoped (name pending review)
+        required: false
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.26.5'
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.13.0'
+          package-manager-cache: false
+      - name: Create private preparation config
+        env:
+          PACKAGE_SCOPE: ${{ inputs.scope }}
+        run: node -e 'require("node:fs").writeFileSync("/tmp/npm-release-config.json", JSON.stringify({scope:process.env.PACKAGE_SCOPE,name:"sushiro-cli",license:"UNLICENSED"}))'
+      - name: Build six targets
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/release/build.mjs --version "$RELEASE_VERSION"
+      - name: Pack private review artifacts
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node scripts/release/prepare.mjs --config /tmp/npm-release-config.json --version "$RELEASE_VERSION"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: npm-review-artifacts
+          path: |
+            packaging/out/dist/build.json
+            packaging/out/npm/release.json
+            packaging/out/npm/SHA256SUMS
+            packaging/out/npm/tarballs/*.tgz

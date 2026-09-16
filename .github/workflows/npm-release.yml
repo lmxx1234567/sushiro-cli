@@ -1,0 +1,161 @@
+name: Release binaries and npm packages
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+# Serialize different versions too, so overlapping releases cannot race latest.
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  test:
+    if: github.repository == 'lmxx1234567/sushiro-cli' && !github.event.repository.private
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.13.0'
+          package-manager-cache: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.26.5'
+          cache: false
+      - run: npm install --global npm@11.6.2 --ignore-scripts --no-audit --no-fund
+      - run: go test -race ./...
+      - run: go vet ./...
+      - run: node --test packaging/test/*.test.mjs
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.13.0'
+          package-manager-cache: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.26.5'
+          cache: false
+      - run: npm install --global npm@11.6.2 --ignore-scripts --no-audit --no-fund
+      - id: release
+        run: node scripts/release/release-event.mjs --out packaging/out/event.json
+      - name: Create candidate package configuration
+        env:
+          PACKAGE_SCOPE: ${{ vars.NPM_SCOPE }}
+          PACKAGE_NAME: ${{ vars.NPM_PACKAGE_NAME || 'sushiro-cli' }}
+        run: node -e 'require("node:fs").writeFileSync("packaging/out/config.json", JSON.stringify({scope:process.env.PACKAGE_SCOPE,name:process.env.PACKAGE_NAME,license:"MIT"}))'
+      - name: Cross-build all six Go targets
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: node scripts/release/build.mjs --version "$RELEASE_VERSION"
+      - name: Verify public source and pack seven exact-version packages
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: node scripts/release/prepare.mjs --version "$RELEASE_VERSION" --config packaging/out/config.json --publish-ready
+      - name: Prepare immutable binaries, legal files, npm tarballs and checksums
+        run: node scripts/release/assets.mjs --release packaging/out/npm/release.json --event packaging/out/event.json --out packaging/out/assets
+      - id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-assets-${{ github.run_id }}-${{ github.run_attempt }}
+          path: packaging/out/assets/
+          if-no-files-found: error
+          retention-days: 30
+
+  assets:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.13.0'
+          package-manager-cache: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          merge-multiple: true
+          path: packaging/out/assets
+      - name: Upload or verify existing GitHub release assets (never overwrite)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/upload-assets.mjs --dir packaging/out/assets
+
+  npm:
+    needs: [test, build, assets]
+    if: vars.NPM_PUBLISH_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.13.0'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install --global npm@11.6.2 --ignore-scripts --no-audit --no-fund
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          merge-multiple: true
+          path: packaging/out/assets
+      - name: OIDC publish platforms first, main last; reconcile existing integrity
+        run: node scripts/release/publish.mjs --release packaging/out/assets/release.json --event packaging/out/assets/event.json --execute
+
+  summary:
+    if: always()
+    needs: [test, build, assets, npm]
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: State actual release outcome
+        env:
+          TEST_RESULT: ${{ needs.test.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+          ASSET_RESULT: ${{ needs.assets.result }}
+          NPM_RESULT: ${{ needs.npm.result }}
+          NPM_ENABLED: ${{ vars.NPM_PUBLISH_ENABLED }}
+        run: |
+          {
+            echo "Tests: $TEST_RESULT; build: $BUILD_RESULT; GitHub assets: $ASSET_RESULT."
+            if [ "$NPM_ENABLED" != "true" ]; then
+              echo 'npm NOT published: NPM_PUBLISH_ENABLED is not true. Complete seven-package bootstrap, account/scope checks and trusted-publisher setup first.'
+            elif [ "$NPM_RESULT" = "success" ]; then
+              echo 'npm publication/reconciliation completed for all seven packages.'
+            else
+              echo "npm NOT fully published: job result $NPM_RESULT. Inspect logs and reconcile registry integrity before rerunning; a GitHub Release alone does not mean npm is installable."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
