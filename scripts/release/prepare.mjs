@@ -56,7 +56,7 @@ function createPackage(directory, manifest, populate) {
   populate();
   const [packed] = JSON.parse(npm(['pack', '--json', '--ignore-scripts', '--cache', path.join(out, '.npm-cache'), '--pack-destination', path.join(out, 'tarballs')], { cwd: directory }));
   const tarball = path.join(out, 'tarballs', packed.filename);
-  packages.push({ name: manifest.name, version: releaseVersion, tarball: path.relative(out, tarball), sha256: sha256(tarball), integrity: packed.integrity, files: packed.files.map(file => file.path) });
+  packages.push({ name: manifest.name, version: releaseVersion, tarball: path.relative(out, tarball).split(path.sep).join('/'), sha256: sha256(tarball), integrity: packed.integrity, files: packed.files.map(file => file.path) });
 }
 for (const target of targets) {
   const { os, cpu, binary } = platform(target);

@@ -111,7 +111,7 @@ test('six packages: offline pack/install, streams, arguments, exit status, signa
     const assets = path.join(temp, 'assets');
     run(process.execPath, [path.join(root, 'scripts/release/assets.mjs'), '--release', syntheticPath, '--event', eventPath, '--out', assets]);
     const tar = path.join(assets, `sushiro-cli-${releaseVersion}-${process.platform === 'win32' ? 'windows' : process.platform}-${process.arch === 'x64' ? 'amd64' : process.arch}.tar.gz`);
-    const names = run('tar', ['-tzf', tar]).split('\n');
+    const names = run('tar', ['-tzf', tar]).split(/\r?\n/);
     assert.ok(names.includes(process.platform === 'win32' ? 'sushiro-cli.exe' : 'sushiro-cli'));
     assert.ok(names.includes('legal/THIRD_PARTY_NOTICES.md'));
     assert.ok(names.includes('legal/THIRD_PARTY_LICENSES.txt'));

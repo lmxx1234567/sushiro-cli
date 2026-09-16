@@ -14,7 +14,7 @@ test('binary archive is deterministic and readable by native tar with licenses a
   const temp=mkdtempSync(path.join(os.tmpdir(),'sushiro-release-tar-'));
   try {
     const file=path.join(temp,'test.tar.gz');writeFileSync(file,data);
-    assert.deepEqual(run('tar',['-tzf',file]).split('\n').sort(),['legal/LICENSE','sushiro-cli']);
+    assert.deepEqual(run('tar',['-tzf',file]).split(/\r?\n/).sort(),['legal/LICENSE','sushiro-cli']);
     run('tar',['-xzf',file,'-C',temp]);
     assert.equal(readFileSync(path.join(temp,'sushiro-cli'),'utf8'),'TEST BINARY ONLY');
     assert.equal(readFileSync(path.join(temp,'legal/LICENSE'),'utf8'),'TEST LICENSE ONLY');
