@@ -1,5 +1,6 @@
+import { spawnTestProcess, stopTestProcess } from './process-tree.mjs';
 import assert from 'node:assert/strict';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { chmodSync, existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -140,15 +141,22 @@ test('six packages: offline pack/install, streams, arguments, exit status, signa
 
 function signalAfterReady(launcher, mode, signal) {
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [launcher, mode], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawnTestProcess(process.execPath, [launcher, mode], { stdio: ['pipe', 'pipe', 'pipe'] });
     let stderr = '', stdout = '', sent = false;
-    const timeout = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('signal test timed out')); }, 10_000);
-    child.on('error', error => { clearTimeout(timeout); reject(error); });
+    let settled = false;
+    const finish = (error, result) => {
+      if (settled) return;
+      settled = true; clearTimeout(timeout); stopTestProcess(child);
+      if (error) reject(error); else resolve(result);
+    };
+    const timeout = setTimeout(() => finish(new Error(`signal test timed out: ${mode} ${signal}`)), 10_000);
+    child.on('error', error => finish(error));
+    child.stdin.on('error', error => finish(error));
     child.stderr.on('data', data => { stderr += data; });
     child.stdout.on('data', data => {
       stdout += data;
       if (!sent && stdout.includes('READY\n')) { sent = true; child.kill(signal); }
     });
-    child.on('close', (code, signal) => { clearTimeout(timeout); resolve({ code, signal, stderr }); });
+    child.on('close', (code, signal) => finish(null, { code, signal, stderr }));
   });
 }

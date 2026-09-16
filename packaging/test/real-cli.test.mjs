@@ -1,6 +1,7 @@
+import { spawnTestProcess, stopTestProcess } from './process-tree.mjs';
 // Builds and installs the actual CLI. Never sends a request to the restaurant.
 import assert from 'node:assert/strict';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync, readdirSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -64,17 +65,20 @@ test('real CLI: six builds, private offline package install, empty configuration
 });
 function protocol(launcher,env,signal){
  return new Promise((resolve,reject)=>{
-  const p=spawn(launcher,['mcp'],{env,stdio:['pipe','pipe','pipe'],shell:process.platform==='win32'});let stderr='',stage=0;
-  const timer=setTimeout(()=>{p.kill('SIGKILL');reject(new Error('MCP timeout'));},10_000);
-  const fail=e=>{clearTimeout(timer);p.kill('SIGKILL');reject(e);};
-  p.on('error',fail);p.stderr.on('data',d=>stderr+=d);
+  const p=spawnTestProcess(launcher,['mcp'],{env,stdio:['pipe','pipe','pipe'],shell:process.platform==='win32'});let stderr='',stage=0;
+  let settled=false;
+  const finish=e=>{if(settled)return;settled=true;clearTimeout(timer);lines.close();stopTestProcess(p);if(e)reject(e);else resolve();};
+  const timer=setTimeout(()=>finish(new Error('MCP timeout')),10_000);
+  const fail=e=>finish(e);
+  p.on('error',fail);p.stdin.on('error',fail);p.stderr.on('data',d=>stderr+=d);
   const send=x=>p.stdin.write(JSON.stringify(x)+'\n');
-  createInterface({input:p.stdout}).on('line',line=>{try{
+  const lines=createInterface({input:p.stdout});
+  lines.on('line',line=>{if(settled)return;try{
    const m=JSON.parse(line);
    if(m.id===1){assert.equal(m.result.serverInfo.name,'sushiro-cli');stage=1;send({jsonrpc:'2.0',method:'notifications/initialized'});send({jsonrpc:'2.0',id:2,method:'tools/list',params:{}});}
    else if(m.id===2){assert.deepEqual(m.result.tools.map(t=>t.name).sort(),['cancel','reservations','reserve','slots','stores','ticket_status']);stage=2;if(signal)p.kill('SIGTERM');else p.stdin.end();}
   }catch(e){fail(e);}});
-  p.on('close',(code)=>{clearTimeout(timer);try{assert.equal(stage,2);assert.equal(stderr,'');assert.equal(code,0);resolve();}catch(e){reject(e);}});
+  p.on('close',(code)=>{try{assert.equal(stage,2);assert.equal(stderr,'');assert.equal(code,0);finish();}catch(e){finish(e);}});
   send({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{},clientInfo:{name:'integration-test',version:'1'}}});
  });
 }
