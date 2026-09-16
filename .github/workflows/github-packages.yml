@@ -1,0 +1,63 @@
+name: Publish GitHub Packages entry
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub Release tag
+        required: true
+        default: v0.1.3
+  workflow_run:
+    workflows: [Release binaries and npm packages]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-packages-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'lmxx1234567/sushiro-cli' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'release'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24.13.0'
+          registry-url: https://npm.pkg.github.com
+          scope: '@lmxx1234567'
+          package-manager-cache: false
+      - name: Download existing release assets
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          mkdir -p packaging/out/assets
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir packaging/out/assets
+      - name: Download assets from completed release workflow
+        if: github.event_name == 'workflow_run'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_RUN: ${{ github.event.workflow_run.id }}
+        run: |
+          mkdir -p packaging/out/assets
+          gh run download "$RELEASE_RUN" --repo "$GITHUB_REPOSITORY" --pattern 'release-assets-*' --dir packaging/out/assets
+      - name: Validate, publish scoped entry and verify registry installation
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+        run: node scripts/release/github-package.mjs packaging/out/assets --execute
