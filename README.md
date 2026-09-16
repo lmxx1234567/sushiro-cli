@@ -4,7 +4,28 @@
 
 感谢 [Ryujoxys/sushiro-overdose](https://github.com/Ryujoxys/sushiro-overdose) 的开源工作：本项目改写适配其 API 请求和解析，直接复用 Slot 模型及公共查询默认值。具体来源见 [CREDITS](CREDITS.md)、[来源说明](docs/provenance.md) 和 [第三方声明](THIRD_PARTY_NOTICES.md)。本项目与寿司郎、微信及上游作者不存在官方背书关系。
 
-**当前为发布准备版本，尚未发布 npm 包。** 个人查询与预约写操作为实验性功能，尚未完成真实业务闭环；不提供原生微信登录。
+个人查询与预约写操作为实验性功能，尚未完成真实业务闭环；不提供原生微信登录。
+
+## 安装
+
+npm 安装仅支持 macOS/Linux 的 amd64（x64）和 arm64，需要 Node.js 20+ 和 npm。公开包为 [sushiro-cli](https://www.npmjs.com/package/sushiro-cli)，源码与独立二进制见 [GitHub](https://github.com/lmxx1234567/sushiro-cli) 和 [Releases](https://github.com/lmxx1234567/sushiro-cli/releases)。
+
+```sh
+npm install -g sushiro-cli
+sushiro-cli version --json
+sushiro-cli help
+```
+
+也可无需全局安装，通过 npx 运行：
+
+```sh
+npx --yes sushiro-cli@0.1.3 help
+npx --yes sushiro-cli@0.1.3 stores --near 39.97,116.43 --limit 2 --json
+```
+
+只安装主包 `sushiro-cli`，npm 会自动选择对应平台包，无需手选。请保留 optional dependencies；首次 npx 运行可能下载包。安装不要求个人登录。MCP 的 npx 配置见 [MCP 文档](docs/mcp.md)。
+
+Windows 暂不提供 npm/npx 安装。请从 [GitHub Release v0.1.3](https://github.com/lmxx1234567/sushiro-cli/releases/tag/v0.1.3) 下载与 CPU 架构对应的 Windows 独立二进制，解压后运行 `sushiro-cli.exe`；其个人凭证安全存储仍未实现。
 
 ## 从源码运行
 

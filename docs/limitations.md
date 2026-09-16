@@ -11,11 +11,12 @@
 | 完整预约列表 | 已知旧接口返回 404，不能解释为“没有预约” |
 | 创建、取消及可靠回查 | 尚未完成真实业务闭环，实验性 |
 | 原生微信登录、远程排队取号 | 尚未提供 |
-| 六平台构建 | macOS/Linux/Windows 的 amd64/arm64 交叉编译通过；实际原生运行仅 macOS arm64 |
-| npm registry 与远端 CI | 尚未发布 npm，也没有以本地测试代替远端运行验收 |
+| 六平台构建 | macOS/Linux/Windows 的 amd64/arm64 交叉编译通过；此前本地真实运行与线上公共查询在 macOS arm64 验证，CI 覆盖以各 job 的实际 runner OS/CPU 和测试内容为准 |
+| npm 平台范围 | 仅 macOS/Linux 的 amd64（x64）和 arm64；安装主包后自动选择平台包。Windows npm/npx 暂未提供，可用 GitHub Release 独立二进制，安全存储限制仍适用 |
+| npm registry 与远端 CI | [npm 包](https://www.npmjs.com/package/sushiro-cli)已发布；远端构建和测试结果见 [发布工作流](https://github.com/lmxx1234567/sushiro-cli/actions/workflows/npm-release.yml)，包已发布不代表个人业务或六个平台全部完成原生验收 |
 
 公共查询验收使用固定参照点与门店，检查列表非空且数量受限、单店 ID 匹配、时段非空，以及字段类型和日期/时间可解析；没有以 HTTP 200 或空列表单独判定成功。每种模式的 CLI/MCP 覆盖门店列表、单店与时段三种查询；没有执行个人或预约写接口。
 
-离线测试覆盖 mock HTTP、响应校验、配置隔离、错误脱敏、确认参数、写入不重试、MCP 协议与 npm 启动器。测试步骤见 [开发说明](development.md)。构建或 mock 成功不能外推线上写入成功；其他五个平台需各自原生运行验证，尤其 Windows 信号和安全存储。
+离线测试覆盖 mock HTTP、响应校验、配置隔离、错误脱敏、确认参数、写入不重试、MCP 协议与 npm 启动器。测试步骤见 [开发说明](development.md)。构建或 mock 成功不能外推线上写入成功；CI 结果仅覆盖实际 runner 的 OS/CPU 与已执行测试，不能外推全部六个平台。Windows 安全存储仍未实现，控制台终止等行为需依据对应原生测试单独确认。
 
 内置公共默认配置的签发归属、分发条件、有效期和续期方式尚未确证，MIT 源码许可不保证后端服务访问权。个人凭证为未加密本地文件，Windows 安全持久化尚未实现。详见 [配置](configuration.md)、[隐私](../PRIVACY.md)、[免责声明](../DISCLAIMER.md) 和 [安全反馈](../SECURITY.md)。

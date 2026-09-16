@@ -1,6 +1,21 @@
 # MCP
 
-MCP 可选，CLI 可独立使用。将源码构建的二进制绝对路径写入支持 stdio MCP 的客户端配置：
+MCP 可选，CLI 可独立使用。macOS/Linux 的 amd64（x64）或 arm64 安装 Node.js 20+ 和 npm 后，可在支持 stdio MCP 的客户端中通过 npx 启动：
+
+```json
+{
+  "mcpServers": {
+    "sushiro-cli": {
+      "command": "npx",
+      "args": ["--yes", "sushiro-cli@0.1.3", "mcp"]
+    }
+  }
+}
+```
+
+这里只指定主包，npm 自动选择平台包，无需手选；Windows 暂不支持此 npx 入口。这里固定包版本，升级时显式修改版本号。首次启动可能下载 npm 包，客户端需能找到 npx 并访问 registry。使用其他档案时，args 为 `["--yes", "sushiro-cli@0.1.3", "--profile", "NAME", "mcp"]`。
+
+也可使用已安装或从源码构建的二进制绝对路径。Windows 请从 [GitHub Release v0.1.3](https://github.com/lmxx1234567/sushiro-cli/releases/tag/v0.1.3) 下载对应架构的独立二进制，使用 `sushiro-cli.exe` 的绝对路径作为 command；JSON 中的 Windows 路径反斜线需写成 `\\`：
 
 ```json
 {
