@@ -71,3 +71,17 @@ npm 包采用明确文件白名单，仅 manifest、生成README、对应二进�
 内置查询配置及第三方服务限制见 [隐私声明](../../PRIVACY.md)、[免责声明](../../DISCLAIMER.md) 和 [功能限制](../limitations.md)。包内政策文档的公开源码链接指向该次发布的 commit；私有准备产物中的 main 链接只是未验证的占位链接。
 
 参考：[GitHub release 事件](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#release)、[npm provenance](https://docs.npmjs.com/generating-provenance-statements/)、[npm 不可重复发布同名同版本](https://docs.npmjs.com/cli/v11/commands/npm-publish/)。
+
+
+## GitHub Packages 入口
+
+GitHub Packages 使用 `@lmxx1234567/sushiro-cli`，并通过 `repository` 字段关联本仓库。它适配主包启动器的依赖前缀，复用 npmjs.org 上同版本的平台包及原许可文件；不重新构建二进制，不替代普通用户的 `npm install -g sushiro-cli`。
+
+`.github/workflows/github-packages.yml` 在 Release 工作流成功后运行，也支持手动指定已发布 tag。它先校验 Release 来源、主包 SHA256/SHA512 和 npm 平台依赖完整性，再做本地安装预检，使用 Actions 的 `GITHUB_TOKEN` 发布，最后从 GitHub registry 实际安装并核对 CLI 版本。已有同版本仅在完整性一致时跳过；不同内容会停止，不自动覆盖或删除。npm 平台包未就绪时任务会停止，先完成 npm 发布，再重跑此工作流。
+
+GitHub Packages 即使公开也需要 registry 认证。按 [GitHub 官方认证说明](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-npm-registry) 配置凭证，并设置 `@lmxx1234567:registry=https://npm.pkg.github.com`；默认 registry 保留 `https://registry.npmjs.org/`，供平台包使用。不要把访问令牌提交到仓库。
+
+```sh
+npm install -g @lmxx1234567/sushiro-cli@0.1.3
+sushiro-cli version --json
+```

@@ -27,6 +27,8 @@ npx --yes sushiro-cli@0.1.3 stores --near 39.97,116.43 --limit 2 --json
 
 Windows 暂不提供 npm/npx 安装。请从 [GitHub Release v0.1.3](https://github.com/lmxx1234567/sushiro-cli/releases/tag/v0.1.3) 下载与 CPU 架构对应的 Windows 独立二进制，解压后运行 `sushiro-cli.exe`；其个人凭证安全存储仍未实现。
 
+另提供已关联仓库的 [GitHub Packages 入口](https://github.com/users/lmxx1234567/packages/npm/package/sushiro-cli)：`@lmxx1234567/sushiro-cli`。该 registry 需要 GitHub 认证，平台依赖仍从 npmjs.org 获取；普通使用推荐上面的 npm 安装命令，详细配置见 [发布指南](docs/distribution/release-plan.md#github-packages-入口)。
+
 ## 从源码运行
 
 需要 Go 1.24 或更新版本。在源码目录运行：
