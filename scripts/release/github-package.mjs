@@ -37,13 +37,24 @@ for (const pkg of packages.slice(0,-1)) {
   const r = await fetch('https://registry.npmjs.org/'+encodeURIComponent(pkg.name)+'/'+pkg.version);
   if (!r.ok || (await r.json()).dist?.integrity !== pkg.integrity) throw Error('npm platform not ready: '+pkg.name);
 }
+// The upstream launcher derives dependency names from manifest.name. Pin its
+// binary package prefix when changing only the registry entry's name.
+const launcherPath = path.join(packageDir, 'bin', 'sushiro-cli.cjs');
+const launcher = readFileSync(launcherPath, 'utf8');
+const original = 'const packageName = `${manifest.name}-${target}`;';
+if (!launcher.includes(original)) throw Error('Unrecognized launcher; review scoped adaptation');
+writeFileSync(launcherPath, launcher.replace(original, 'const packageName = `sushiro-cli-${target}`;'));
 manifest.name = name;
 manifest.publishConfig = {registry};
 writeFileSync(manifestPath, JSON.stringify(manifest,null,2)+'\n');
-writeFileSync(path.join(packageDir,'README.md'), `# ${name}\n\nGitHub Packages entry for [sushiro-cli](${repository}), version ${event.version}.\n\nFor the simplest installation, use the public npm registry:\n\n\`\`\`sh\nnpm install -g sushiro-cli\n\`\`\`\n\nGitHub Packages installation requires GitHub authentication and \`@lmxx1234567:registry=https://npm.pkg.github.com\` in your npm configuration. Keep the default registry set to https://registry.npmjs.org for the exact-version platform dependencies.\n\n\`\`\`sh\nnpm install -g ${name}@${event.version}\nsushiro-cli help\n\`\`\`\n\nSupports macOS/Linux x64 and ARM64. Windows binaries are available from GitHub Releases. This entry reuses the original launcher and legal files; platform binaries are installed from npmjs.org. See the repository for privacy, limitations, credits and MCP setup.\n`);
+writeFileSync(path.join(packageDir,'README.md'), `# ${name}\n\nGitHub Packages entry for [sushiro-cli](${repository}), version ${event.version}.\n\nFor the simplest installation, use the public npm registry:\n\n\`\`\`sh\nnpm install -g sushiro-cli\n\`\`\`\n\nGitHub Packages installation requires GitHub authentication and \`@lmxx1234567:registry=https://npm.pkg.github.com\` in your npm configuration. Keep the default registry set to https://registry.npmjs.org for the exact-version platform dependencies.\n\n\`\`\`sh\nnpm install -g ${name}@${event.version}\nsushiro-cli help\n\`\`\`\n\nSupports macOS/Linux x64 and ARM64. Windows binaries are available from GitHub Releases. This entry adapts the launcher package prefix and retains the original legal files; platform binaries are installed from npmjs.org. See the repository for privacy, limitations, credits and MCP setup.\n`);
 const packed = JSON.parse(execFileSync('npm',['pack',packageDir,'--pack-destination',work,'--ignore-scripts','--json'],{encoding:'utf8'}))[0];
 const tarball = path.join(work,packed.filename);
 console.log(JSON.stringify({name,version:event.version,integrity:packed.integrity,tarball,execute}));
+const preflight = path.join(work, 'preflight');
+execFileSync('npm',['install','--prefix',preflight,tarball,'--registry','https://registry.npmjs.org','--ignore-scripts','--no-audit','--no-fund'],{stdio:'inherit'});
+const preflightResult = execFileSync(path.join(preflight,'node_modules','.bin','sushiro-cli'),['version','--json'],{encoding:'utf8'});
+if(JSON.parse(preflightResult).data.version!==event.version)throw Error('Scoped entry preflight failed');
 if (execute) {
   function metadata(spec) {
     try { const raw=execFileSync('npm',['view',spec,'--registry',registry,'--json'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}); return raw.trim()?JSON.parse(raw):null; }
